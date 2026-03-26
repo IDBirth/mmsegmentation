@@ -1,4 +1,4 @@
-batch_size = 16 #orginal = 8
+batch_size = 4 #orginal = 8
 max_iters = 160000                                                          # 训练迭代次数
 ckpt_interval = 16000                                                       # 训练保存迭代间隔
 val_interval = 16000                                                        # 训练验证迭代间隔
@@ -163,9 +163,9 @@ test_dataloader = dict(
         seg_map_suffix='_gtFine_labelTrainIds.png',
         pipeline=[
             dict(type='LoadImageFromFile'),
-            dict(keep_ratio=False, scale=(
-                832,
-                832,
+            dict(keep_ratio=True, scale=(
+                2048,
+                1024,
             ), type='Resize'),
             dict(type='LoadAnnotations'),
             dict(type='PackSegInputs'),
@@ -180,9 +180,9 @@ test_evaluator = dict(
     ], type='IoUMetric')
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(keep_ratio=False, scale=(
-        832,
-        832,
+    dict(keep_ratio=True, scale=(
+        2048,
+        1024,
     ), type='Resize'),
     dict(type='LoadAnnotations'),
     dict(type='PackSegInputs'),
@@ -278,9 +278,9 @@ val_dataloader = dict(
         seg_map_suffix='_gtFine_labelTrainIds.png',
         pipeline=[
             dict(type='LoadImageFromFile'),
-            dict(keep_ratio=False, scale=(
-                832,
-                832,
+            dict(keep_ratio=True, scale=(
+                2048,
+                1024,
             ), type='Resize'),
             dict(type='LoadAnnotations'),
             dict(type='PackSegInputs'),

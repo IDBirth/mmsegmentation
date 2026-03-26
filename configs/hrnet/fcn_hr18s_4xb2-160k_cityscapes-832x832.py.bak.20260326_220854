@@ -1,12 +1,12 @@
-batch_size = 16 #orginal = 8
+batch_size = 4 #orginal = 8
 max_iters = 160000                                                          # 训练迭代次数
 ckpt_interval = 16000                                                       # 训练保存迭代间隔
 val_interval = 16000                                                        # 训练验证迭代间隔
-dataset_type = 'BaseSegDataset'                                          # custom dataset
-data_root='data/dji_seg'         #指定训练数据路径 / Dataser root path
-work_dir = './work_dirs/dji_hrnet18_seg'         # 指定训练结果路径 / Working directory
-classes=('background', 'cable', 'tower_lattice', 'tower_tucohy', 'tower_wooden')           # 确认自己训练类别(控制分割类别数量不超过5个) / Classes to be trained, no more than 5 classes for your own dataset
-palette=[[0, 0, 0], [255, 215, 0], [255, 0, 0], [0, 255, 0], [0, 0, 255]]     # 和classes成对(对应控制分割类别数量，也不超过5个) / Color palette for visualization, in pair with classes, no more than 5 classes for your own dataset
+dataset_type = 'CityscapesDataset'                                          # 这里以 CityscapesDataset 训练数据为例
+data_root='/home/ubu/Desktop/MMSEG/mmsegmentation/data/dji_seg/DS1'         #指定训练数据路径 / Dataser root path
+work_dir = '/home/ubu/Desktop/MMSEG/mmsegmentation/data/dji_seg/DSR'         # 指定训练结果路径 / Working directory
+classes=('background', 'crack', 'spall')           # 确认自己训练类别(控制分割类别数量不超过5个) / Classes to be trained, no more than 5 classes for your own dataset
+palette=[[0, 0, 0], [255, 0, 0], [0, 255, 0]]     # 和classes成对(对应控制分割类别数量，也不超过5个) / Color palette for visualization, in pair with classes, no more than 5 classes for your own dataset
 metainfo=dict(classes=classes, palette=palette)                             # 和classes及palette相关 / Meta information, in pair with classes and palette
 num_classes = len(classes)                                                  # 和classes相关 / Number of classes, in pair with classes
 
@@ -156,16 +156,14 @@ test_dataloader = dict(
     batch_size=1,
     dataset=dict(
         data_prefix=dict(
-            img_path='leftImg8bit/val', seg_map_path='gtFine/val'),
+            img_path='leftImg8bit/train', seg_map_path='gtFine/train'),
         data_root=data_root,
         metainfo=metainfo,
-        img_suffix='_leftImg8bit.png',
-        seg_map_suffix='_gtFine_labelTrainIds.png',
         pipeline=[
             dict(type='LoadImageFromFile'),
-            dict(keep_ratio=False, scale=(
-                832,
-                832,
+            dict(keep_ratio=True, scale=(
+                2048,
+                1024,
             ), type='Resize'),
             dict(type='LoadAnnotations'),
             dict(type='PackSegInputs'),
@@ -180,9 +178,9 @@ test_evaluator = dict(
     ], type='IoUMetric')
 test_pipeline = [
     dict(type='LoadImageFromFile'),
-    dict(keep_ratio=False, scale=(
-        832,
-        832,
+    dict(keep_ratio=True, scale=(
+        2048,
+        1024,
     ), type='Resize'),
     dict(type='LoadAnnotations'),
     dict(type='PackSegInputs'),
@@ -195,8 +193,6 @@ train_dataloader = dict(
             img_path='leftImg8bit/train', seg_map_path='gtFine/train'),
         data_root=data_root,
         metainfo=metainfo,
-        img_suffix='_leftImg8bit.png',
-        seg_map_suffix='_gtFine_labelTrainIds.png',
         pipeline=[
             dict(type='LoadImageFromFile'),
             dict(type='LoadAnnotations'),
@@ -271,16 +267,14 @@ val_dataloader = dict(
     batch_size=1,
     dataset=dict(
         data_prefix=dict(
-            img_path='leftImg8bit/val', seg_map_path='gtFine/val'),
+            img_path='leftImg8bit/train', seg_map_path='gtFine/train'),
         data_root=data_root,
         metainfo=metainfo,
-        img_suffix='_leftImg8bit.png',
-        seg_map_suffix='_gtFine_labelTrainIds.png',
         pipeline=[
             dict(type='LoadImageFromFile'),
-            dict(keep_ratio=False, scale=(
-                832,
-                832,
+            dict(keep_ratio=True, scale=(
+                2048,
+                1024,
             ), type='Resize'),
             dict(type='LoadAnnotations'),
             dict(type='PackSegInputs'),
