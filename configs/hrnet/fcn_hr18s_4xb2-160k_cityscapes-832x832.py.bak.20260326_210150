@@ -1,14 +1,21 @@
-batch_size = 4 #orginal = 8
+batch_size = 8
 max_iters = 160000                                                          # 训练迭代次数
 ckpt_interval = 16000                                                       # 训练保存迭代间隔
 val_interval = 16000                                                        # 训练验证迭代间隔
 dataset_type = 'CityscapesDataset'                                          # 这里以 CityscapesDataset 训练数据为例
-data_root='/home/ubu/Desktop/MMSEG/mmsegmentation/data/dji_seg/DS1'         #指定训练数据路径 / Dataser root path
-work_dir = '/home/ubu/Desktop/MMSEG/mmsegmentation/data/dji_seg/DSR'         # 指定训练结果路径 / Working directory
-classes=('background', 'crack', 'spall')           # 确认自己训练类别(控制分割类别数量不超过5个) / Classes to be trained, no more than 5 classes for your own dataset
-palette=[[0, 0, 0], [255, 0, 0], [0, 255, 0]]     # 和classes成对(对应控制分割类别数量，也不超过5个) / Color palette for visualization, in pair with classes, no more than 5 classes for your own dataset
-metainfo=dict(classes=classes, palette=palette)                             # 和classes及palette相关 / Meta information, in pair with classes and palette
-num_classes = len(classes)                                                  # 和classes相关 / Number of classes, in pair with classes
+data_root='/home/gnie/chasel.cai/1_aiinside/dataset/cityscapes'                                # 指定训练数据路径
+work_dir = '../your_train_exp/exp_fcn_hr18s_4xb2-160k_cityscapes-832x832'   # 指定训练结果路径
+classes=('road', 'sidewalk', 'building', 'wall', 'fence', 'pole',           # 确认自己训练类别(控制分割类别数量不超过5个)
+            'traffic light', 'traffic sign', 'vegetation', 'terrain',
+            'sky', 'person', 'rider', 'car', 'truck', 'bus', 'train',
+            'motorcycle', 'bicycle')
+palette=[[128, 64, 128], [244, 35, 232], [70, 70, 70], [102, 102, 156],     # 和classes成对(对应控制分割类别数量，也不超过5个)
+            [190, 153, 153], [153, 153, 153], [250, 170,30], [220, 220, 0],
+            [107, 142, 35], [152, 251, 152], [70, 130, 180],
+            [220, 20, 60], [255, 0, 0], [0, 0, 142], [0, 0, 70],
+            [0, 60, 100], [0, 80, 100], [0, 0, 230], [119, 11, 32]]
+metainfo=dict(classes=classes, palette=palette)                             # 和classes及palette相关
+num_classes = len(classes)                                                  # 和classes相关
 
 # ====================================== 以下都不做修改 ====================================== #
 crop_size = (832, 832)
