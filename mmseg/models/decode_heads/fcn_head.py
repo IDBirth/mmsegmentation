@@ -93,4 +93,9 @@ class FCNHead(BaseDecodeHead):
         """Forward function."""
         output = self._forward_feature(inputs)
         output = self.cls_seg(output)
-        return output
+        if not self.training:
+            argmax_output = torch.argmax(output, dim=1, keepdim=True)
+            # print(f">>> use torch.argmax: {argmax_output.shape}")
+            return argmax_output
+        else:
+            return output

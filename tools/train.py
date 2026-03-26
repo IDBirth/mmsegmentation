@@ -8,6 +8,9 @@ from mmengine.config import Config, DictAction
 from mmengine.logging import print_log
 from mmengine.runner import Runner
 
+import sys
+mmseg_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, mmseg_path)
 from mmseg.registry import RUNNERS
 
 

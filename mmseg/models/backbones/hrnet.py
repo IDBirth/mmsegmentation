@@ -9,6 +9,7 @@ from mmengine.utils.dl_utils.parrots_wrapper import _BatchNorm
 from mmseg.registry import MODELS
 from ..utils import Upsample, resize
 from .resnet import BasicBlock, Bottleneck
+from ..utils import BilinearConvTranspose2d, NearestConvTranspose2d
 
 
 class HRModule(BaseModule):
@@ -44,8 +45,8 @@ class HRModule(BaseModule):
         self.with_cp = with_cp
         self.branches = self._make_branches(num_branches, blocks, num_blocks,
                                             num_channels)
-        self.fuse_layers = self._make_fuse_layers()
         self.relu = nn.ReLU(inplace=False)
+        self.fuse_layers = self._make_fuse_layers()
 
     def _check_branches(self, num_branches, num_blocks, in_channels,
                         num_channels):
@@ -135,6 +136,10 @@ class HRModule(BaseModule):
             fuse_layer = []
             for j in range(num_branches):
                 if j > i:
+                    # 创建resize层用于上采样
+                    scale_factor = 2 ** (j - i)
+                    # 创建resize层并添加到ModuleDict
+                    resize_layer = BilinearConvTranspose2d(in_channels[i], scale_factor=scale_factor)
                     fuse_layer.append(
                         nn.Sequential(
                             build_conv_layer(
@@ -146,11 +151,8 @@ class HRModule(BaseModule):
                                 padding=0,
                                 bias=False),
                             build_norm_layer(self.norm_cfg, in_channels[i])[1],
-                            # we set align_corners=False for HRNet
-                            Upsample(
-                                scale_factor=2**(j - i),
-                                mode='bilinear',
-                                align_corners=False)))
+                            resize_layer  # 使用ConvTranspose2d
+                        ))
                 elif j == i:
                     fuse_layer.append(None)
                 else:
@@ -198,18 +200,10 @@ class HRModule(BaseModule):
 
         x_fuse = []
         for i in range(len(self.fuse_layers)):
-            y = 0
+            y= x[i]
             for j in range(self.num_branches):
-                if i == j:
-                    y += x[j]
-                elif j > i:
-                    y = y + resize(
-                        self.fuse_layers[i][j](x[j]),
-                        size=x[i].shape[2:],
-                        mode='bilinear',
-                        align_corners=False)
-                else:
-                    y += self.fuse_layers[i][j](x[j])
+                if i != j:
+                    y = y + self.fuse_layers[i][j](x[j])
             x_fuse.append(self.relu(y))
         return x_fuse
 

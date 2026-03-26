@@ -178,8 +178,8 @@ class BaseSegmentor(BaseModel, metaclass=ABCMeta):
                 i_seg_logits = resize(
                     i_seg_logits,
                     size=img_meta['ori_shape'],
-                    mode='bilinear',
-                    align_corners=self.align_corners,
+                    mode='nearest',
+                    align_corners=None,
                     warning=False).squeeze(0)
             else:
                 i_seg_logits = seg_logits[i]
@@ -187,9 +187,9 @@ class BaseSegmentor(BaseModel, metaclass=ABCMeta):
             if C > 1:
                 i_seg_pred = i_seg_logits.argmax(dim=0, keepdim=True)
             else:
-                i_seg_logits = i_seg_logits.sigmoid()
-                i_seg_pred = (i_seg_logits >
-                              self.decode_head.threshold).to(i_seg_logits)
+                # i_seg_logits = i_seg_logits.sigmoid()
+                # i_seg_pred = (i_seg_logits > self.decode_head.threshold).to(i_seg_logits)
+                i_seg_pred = i_seg_logits.long()
             data_samples[i].set_data({
                 'seg_logits':
                 PixelData(**{'data': i_seg_logits}),

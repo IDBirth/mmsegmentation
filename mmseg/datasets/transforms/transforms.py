@@ -2535,3 +2535,31 @@ class RandomDepthMix(BaseTransform):
 
         results['img'] = img
         return results
+
+@TRANSFORMS.register_module()
+class RemapSegLabel(BaseTransform):
+    def __init__(self, mapping=None, ignore_index=255, background_index=0):
+        """
+        mapping: dict，例如 {0: 0, 2: 1, 10: 2}
+        ignore_index: 原始标签对应的忽略像素(比如255)
+        background_index: 其它归为背景的id
+        """
+        super().__init__()
+        if mapping is None:
+            mapping = {0: 0, 2: 1, 10: 2}
+        self.mapping = mapping
+        self.ignore_index = ignore_index
+        self.background_index = background_index
+        
+    def transform(self, results: dict) -> dict:
+        seg = np.array(results['gt_seg_map'])
+        # old_label_id = np.unique(seg)
+        new_seg = np.full_like(seg, self.background_index, dtype=np.uint8)      # 默认新的标签全为背景
+        for ori_id, new_id in self.mapping.items():                             # 映射目标类
+            new_seg[seg == ori_id] = new_id
+        if self.ignore_index is not None:                                       # 保留原ignore区域，若希望原来的ignore依然为ignore（选做）
+            new_seg[seg == self.ignore_index] = self.ignore_index
+        results['gt_seg_map'] = new_seg
+        # new_label_id = np.unique(new_seg)
+        # print(f">>> mapping: {self.mapping}, background_index: {self.background_index}, old: {old_label_id} -> new: {new_label_id}")
+        return results

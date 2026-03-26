@@ -13,6 +13,7 @@ from mmseg.structures import build_pixel_sampler
 from mmseg.utils import ConfigType, SampleList
 from ..losses import accuracy
 from ..utils import resize
+from ..utils import BilinearConvTranspose2d, NearestConvTranspose2d
 
 
 class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
@@ -160,6 +161,17 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
         else:
             self.dropout = None
 
+        print(f">>> in_channels: {in_channels}, out_channels: {out_channels}")
+        print(f">>> in_index: {in_index}")
+        print(f">>> input_transform: {input_transform}")
+        # 初始化resize层(NPU)
+        if self.input_transform == 'resize_concat':
+            self.resize_layers = nn.ModuleList()
+            self.resize_layers.append(nn.Identity())
+            for i in range(1, len(self.in_index)):
+                scale_factor = 2 ** i
+                self.resize_layers.append(BilinearConvTranspose2d(in_channels[i], scale_factor=scale_factor))
+
     def extra_repr(self):
         """Extra repr."""
         s = f'input_transform={self.input_transform}, ' \
@@ -217,14 +229,14 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
 
         if self.input_transform == 'resize_concat':
             inputs = [inputs[i] for i in self.in_index]
-            upsampled_inputs = [
-                resize(
-                    input=x,
-                    size=inputs[0].shape[2:],
-                    mode='bilinear',
-                    align_corners=self.align_corners) for x in inputs
-            ]
+            # for i, it in enumerate(inputs): print(f">>> Original input {i}: {it.shape}")
+            upsampled_inputs = []
+            assert len(self.resize_layers) == len(inputs)
+            for i, x in enumerate(inputs):
+                upsampled_inputs.append(self.resize_layers[i](x))
+                # print(f">>> Resized input {i}: {upsampled_inputs[-1].shape}")
             inputs = torch.cat(upsampled_inputs, dim=1)
+            # print(f">>> Concatenated inputs: {inputs.shape}")
         elif self.input_transform == 'multiple_select':
             inputs = [inputs[i] for i in self.in_index]
         else:
@@ -359,8 +371,8 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
             size = batch_img_metas[0]['img_shape']
 
         seg_logits = resize(
-            input=seg_logits,
+            input=seg_logits.float(),   # 解决 RuntimeError: "upsample_nearest2d_out_frame" not implemented for 'Long'
             size=size,
-            mode='bilinear',
-            align_corners=self.align_corners)
+            mode='nearest',
+            align_corners=None)
         return seg_logits
