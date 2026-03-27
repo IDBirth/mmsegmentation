@@ -2,10 +2,28 @@
 from argparse import ArgumentParser
 
 import cv2
+import numpy as np
 from mmengine.model.utils import revert_sync_batchnorm
 
 from mmseg.apis import inference_model, init_model
-from mmseg.apis.inference import show_result_pyplot
+
+
+def build_color_mask(frame: np.ndarray, result,
+                     palette_bgr: np.ndarray) -> np.ndarray:
+    """Build color segmentation mask in BGR format."""
+    pred = result.pred_sem_seg.data.squeeze(0).detach().cpu().numpy()
+
+    if pred.shape[:2] != frame.shape[:2]:
+        pred = cv2.resize(
+            pred.astype(np.uint8),
+            (frame.shape[1], frame.shape[0]),
+            interpolation=cv2.INTER_NEAREST)
+
+    pred = pred.astype(np.int32)
+    valid = (pred >= 0) & (pred < len(palette_bgr))
+    pred_safe = np.where(valid, pred, 0)
+
+    return palette_bgr[pred_safe].astype(np.uint8)
 
 
 def main():
@@ -47,7 +65,13 @@ def main():
         type=float,
         default=0.5,
         help='Opacity of painted segmentation map. In (0, 1] range.')
+    parser.add_argument(
+        '--infer-every',
+        type=int,
+        default=25,
+        help='Run model inference once every N frames. Default: 25')
     args = parser.parse_args()
+    assert args.infer_every > 0, '--infer-every must be > 0'
 
     assert args.show or args.output_file, \
         'At least one output should be enabled.'
@@ -56,6 +80,7 @@ def main():
     model = init_model(args.config, args.checkpoint, device=args.device)
     if args.device == 'cpu':
         model = revert_sync_batchnorm(model)
+    palette_bgr = np.array(model.dataset_meta['palette'], dtype=np.uint8)[:, ::-1]
 
     # build input video
     if args.video.isdigit():
@@ -81,21 +106,31 @@ def main():
                                  (output_width, output_height), True)
 
     # start looping
+    frame_id = 0
+    cached_color_mask = None
     try:
         while True:
             flag, frame = cap.read()
             if not flag:
                 break
 
-            # test a single image
-            result = inference_model(model, frame)
+            # Run inference every N frames and reuse last mask in-between.
+            should_infer = (frame_id % args.infer_every == 0
+                            or cached_color_mask is None
+                            or cached_color_mask.shape[:2] != frame.shape[:2])
+            if should_infer:
+                result = inference_model(model, frame)
+                cached_color_mask = build_color_mask(frame, result, palette_bgr)
 
-            # blend raw image and prediction
-            draw_img = show_result_pyplot(model, frame, result)
+            draw_img = cv2.addWeighted(frame, 1 - args.opacity,
+                                       cached_color_mask, args.opacity, 0)
+            frame_id += 1
 
             if args.show:
                 cv2.imshow('video_demo', draw_img)
-                cv2.waitKey(args.show_wait_time)
+                key = cv2.waitKey(args.show_wait_time) & 0xFF
+                if key == ord('q'):
+                    break
             if writer:
                 if draw_img.shape[0] != output_height or draw_img.shape[
                         1] != output_width:
